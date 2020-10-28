@@ -27,6 +27,7 @@ The Makefile also assumes `nvcc` is in the PATH but you can easily change it to 
 
 ### Example
 Do not try to modify the parameters after you have created the UAMMD object as it will have no effect whatsoever in it.  
+Mdot expects positions and forces to be in a one dimensional array with interleaved pattern such that positions = [x1, y1, z1, x2, y2, z2...]. Same goes for the output, which must have the correct size (3*N) when passed to Mdot.  
 ```python
 import uammd
 numberParticles = 20000;
