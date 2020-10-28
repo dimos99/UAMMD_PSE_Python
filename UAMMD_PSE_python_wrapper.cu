@@ -37,12 +37,11 @@ struct UAMMD {
 	    py::array_t<real> h_MF){
     {
       auto pos = pd->getPos(uammd::access::location::gpu, uammd::access::mode::write);
-      auto cit = thrust::make_counting_iterator<int>(0);
       thrust::copy((uammd::real3*)h_pos.data(), (uammd::real3*)h_pos.data() + numberParticles, tmp.begin());
-      thrust::transform(tmp.begin(), tmp.end(), pos.begin(), Real3ToReal4());
+      thrust::transform(thrust::cuda::par.on(st), tmp.begin(), tmp.end(), pos.begin(), Real3ToReal4());
       auto forces = pd->getForce(uammd::access::location::gpu, uammd::access::mode::write);
       thrust::copy((uammd::real3*)h_F.data(), (uammd::real3*)h_F.data() + numberParticles, tmp.begin());
-      thrust::transform(tmp.begin(), tmp.end(), forces.begin(), Real3ToReal4());
+      thrust::transform(thrust::cuda::par.on(st), tmp.begin(), tmp.end(), forces.begin(), Real3ToReal4());
     }
     auto d_MF_ptr = (uammd::real3*)(thrust::raw_pointer_cast(d_MF.data()));
     pse->computeMF(d_MF_ptr, st);
@@ -52,9 +51,6 @@ struct UAMMD {
   ~UAMMD(){
     cudaDeviceSynchronize();
     cudaStreamDestroy(st);
-    pse.reset();
-    pd.reset();
-    sys->finish();
   }
 };
 
