@@ -4,11 +4,14 @@
 UAMMD: [https://github.com/RaulPPelaez/uammd]()  
 
 This code allows to call UAMMD's PSE module from a python script to compute the product of the mobility with a certain vector (usually forces acting on particle positions).  
-You can read about PSE here: [https://github.com/RaulPPelaez/UAMMD/wiki/BDHI-PSE]()  
+You can read about PSE here: [https://github.com/RaulPPelaez/UAMMD/wiki/BDHI-PSE]()   
 
 ### Requirements
 
-You need [UAMMD](https://github.com/RaulPPelaez/uammd) and [pybind11](https://github.com/pybind/pybind11), both of which are included in this repository as git submodules (so remember to clone recursively).  
+You need [UAMMD](https://github.com/RaulPPelaez/uammd) and [pybind11](https://github.com/pybind/pybind11), both of which are included in this repository as git submodules. Remember to clone recursively with:  
+```shell
+git clone --recursive https://github.com/RaulPPelaez/UAMMD_PSE_Python
+```
 
 You need the CUDA toolkit installed, I tested up to the latest version at the moment (CUDA 11).  
 
