@@ -3,8 +3,7 @@ import numpy as np
 
 numberParticles = 20000;
 L=120.0;
-
-par = uammd.PSEParameters(psi=0.3, viscosity=1.0, hydrodynamicRadius=1.0, tolerance=1e-4, box=uammd.Box(L,L,L));
+par = uammd.PSEParameters(psi=0.3, viscosity=1.0, hydrodynamicRadius=1.0, tolerance=1e-4, box=uammd.Box(L,L,L), shearStrain=0.1);
 pse = uammd.UAMMD(par, numberParticles);
 
 #pse.Mdot assumes interleaved positions and forces, that is x1,y1,z1,x2,y2,z2,...

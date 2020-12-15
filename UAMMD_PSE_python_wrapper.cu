@@ -78,7 +78,8 @@ PYBIND11_MODULE(uammd, m) {
 		    uammd::real dt,
 		    uammd::Box  box,
 		    uammd::real tolerance,
-		    uammd::real psi) {             
+		    uammd::real psi,
+		    uammd::real shearStrain) {             
       auto tmp = std::unique_ptr<Parameters>(new Parameters);
       tmp->temperature = temperature;
       tmp->viscosity = viscosity;
@@ -87,9 +88,10 @@ PYBIND11_MODULE(uammd, m) {
       tmp->box = box;
       tmp->tolerance = tolerance;
       tmp->psi = psi;
+      tmp->shearStrain = shearStrain;
       return tmp;	
     }),"temperature"_a = 0.0,"viscosity"_a  = 1.0,"hydrodynamicRadius"_a = 1.0,
-	"dt"_a = 0.0,"box"_a = uammd::Box(),"tolerance"_a = 1e-4,"psi"_a=1.0).
+	"dt"_a = 0.0,"box"_a = uammd::Box(),"tolerance"_a = 1e-4,"psi"_a=1.0, "shearStrain"_a = 0.0).
     def_readwrite("temperature", &Parameters::temperature).
     def_readwrite("viscosity", &Parameters::viscosity).
     def_readwrite("hydrodynamicRadius", &Parameters::hydrodynamicRadius).
@@ -97,6 +99,7 @@ PYBIND11_MODULE(uammd, m) {
     def_readwrite("tolerance", &Parameters::tolerance).
     def_readwrite("psi", &Parameters::psi).
     def_readwrite("box", &Parameters::box).
+    def_readwrite("shearStrain", &Parameters::shearStrain).
     def("__str__", [](const Parameters &p){
       return "temperature = "+std::to_string(p.temperature)+"\n"+
 	"viscosity = " + std::to_string(p.viscosity) +"\n"+
@@ -105,7 +108,8 @@ PYBIND11_MODULE(uammd, m) {
 	"box (L = " + std::to_string(p.box.boxSize.x) +
 	"," + std::to_string(p.box.boxSize.y) + "," + std::to_string(p.box.boxSize.z) + ")\n"+
 	"tolerance = " + std::to_string(p. tolerance)+ "\n" + 
-	"psi = " + std::to_string(p. psi);
+	"psi = " + std::to_string(p. psi) + "\n" +
+	"shearStrain = " + std::to_string(p.shearStrain);
     });
     
     }
