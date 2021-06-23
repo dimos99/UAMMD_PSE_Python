@@ -35,14 +35,7 @@ struct UAMMD {
   void Mdot(py::array_t<real> h_pos,
 	    py::array_t<real> h_F,
 	    py::array_t<real> h_MF){
-    {
-      auto pos = pd->getPos(uammd::access::location::gpu, uammd::access::mode::write);
-      thrust::copy((uammd::real3*)h_pos.data(), (uammd::real3*)h_pos.data() + numberParticles, tmp.begin());
-      thrust::transform(thrust::cuda::par.on(st), tmp.begin(), tmp.end(), pos.begin(), Real3ToReal4());
-      auto forces = pd->getForce(uammd::access::location::gpu, uammd::access::mode::write);
-      thrust::copy((uammd::real3*)h_F.data(), (uammd::real3*)h_F.data() + numberParticles, tmp.begin());
-      thrust::transform(thrust::cuda::par.on(st), tmp.begin(), tmp.end(), forces.begin(), Real3ToReal4());
-    }
+    uploadPosAndForceToUAMMD(h_pos, h_F);
     auto d_MF_ptr = (uammd::real3*)(thrust::raw_pointer_cast(d_MF.data()));
     pse->computeMF(d_MF_ptr, st);
     thrust::copy(d_MF.begin(), d_MF.end(), h_MF.mutable_data());
@@ -51,14 +44,7 @@ struct UAMMD {
   void MdotNearField(py::array_t<real> h_pos,
 		     py::array_t<real> h_F,
 		     py::array_t<real> h_MF){
-    {
-      auto pos = pd->getPos(uammd::access::location::gpu, uammd::access::mode::write);
-      thrust::copy((uammd::real3*)h_pos.data(), (uammd::real3*)h_pos.data() + numberParticles, tmp.begin());
-      thrust::transform(thrust::cuda::par.on(st), tmp.begin(), tmp.end(), pos.begin(), Real3ToReal4());
-      auto forces = pd->getForce(uammd::access::location::gpu, uammd::access::mode::write);
-      thrust::copy((uammd::real3*)h_F.data(), (uammd::real3*)h_F.data() + numberParticles, tmp.begin());
-      thrust::transform(thrust::cuda::par.on(st), tmp.begin(), tmp.end(), forces.begin(), Real3ToReal4());
-    }
+    uploadPosAndForceToUAMMD(h_pos, h_F);
     auto d_MF_ptr = (uammd::real3*)(thrust::raw_pointer_cast(d_MF.data()));
     pse->computeMFNearField(d_MF_ptr, st);
     thrust::copy(d_MF.begin(), d_MF.end(), h_MF.mutable_data());
@@ -67,14 +53,7 @@ struct UAMMD {
   void MdotFarField(py::array_t<real> h_pos,
 		    py::array_t<real> h_F,
 		    py::array_t<real> h_MF){
-    {
-      auto pos = pd->getPos(uammd::access::location::gpu, uammd::access::mode::write);
-      thrust::copy((uammd::real3*)h_pos.data(), (uammd::real3*)h_pos.data() + numberParticles, tmp.begin());
-      thrust::transform(thrust::cuda::par.on(st), tmp.begin(), tmp.end(), pos.begin(), Real3ToReal4());
-      auto forces = pd->getForce(uammd::access::location::gpu, uammd::access::mode::write);
-      thrust::copy((uammd::real3*)h_F.data(), (uammd::real3*)h_F.data() + numberParticles, tmp.begin());
-      thrust::transform(thrust::cuda::par.on(st), tmp.begin(), tmp.end(), forces.begin(), Real3ToReal4());
-    }
+    uploadPosAndForceToUAMMD(h_pos, h_F);
     auto d_MF_ptr = (uammd::real3*)(thrust::raw_pointer_cast(d_MF.data()));
     pse->computeMFFarField(d_MF_ptr, st);
     thrust::copy(d_MF.begin(), d_MF.end(), h_MF.mutable_data());
@@ -83,6 +62,17 @@ struct UAMMD {
   ~UAMMD(){
     cudaDeviceSynchronize();
     cudaStreamDestroy(st);
+  }
+private:
+  void uploadPosAndForceToUAMMD(py::array_t<real> h_pos, py::array_t<real> h_F){
+    auto pos = pd->getPos(uammd::access::location::gpu, uammd::access::mode::write);
+    thrust::copy((uammd::real3*)h_pos.data(), (uammd::real3*)h_pos.data() + numberParticles, tmp.begin());
+    thrust::transform(thrust::cuda::par.on(st), tmp.begin(), tmp.end(), pos.begin(), Real3ToReal4());
+    if(h_F.data()){
+      auto forces = pd->getForce(uammd::access::location::gpu, uammd::access::mode::write);
+      thrust::copy((uammd::real3*)h_F.data(), (uammd::real3*)h_F.data() + numberParticles, tmp.begin());
+      thrust::transform(thrust::cuda::par.on(st), tmp.begin(), tmp.end(), forces.begin(), Real3ToReal4());
+    }   
   }
 };
 
@@ -94,12 +84,12 @@ PYBIND11_MODULE(uammd, m) {
   m.doc() = "UAMMD PSE Python interface";
   py::class_<UAMMD>(m, "UAMMD").
     def(py::init<Parameters, int>(),"Parameters"_a, "numberParticles"_a).
-    def("Mdot", &UAMMD::Mdot, "Computes the product of the Mobility tensor with a provided array",
-	"positions"_a,"forces"_a,"result"_a).
-    def("MdotNearField", &UAMMD::MdotNearField, "Computes the product of the Mobility tensor with a provided array. Only adds the Near field contribution",
-	"positions"_a,"forces"_a,"result"_a).
-    def("MdotFarField", &UAMMD::MdotFarField, "Computes the product of the Mobility tensor with a provided array. Only adds the Far field contribution",
-	"positions"_a,"forces"_a,"result"_a);
+    def("Mdot", &UAMMD::Mdot, "Computes the hydrodynamic (deterministic and stochastic) displacements. If the forces are ommited only the stochastic part is computed. If the temperature is zero (default) the stochastic part is ommited.",
+	"positions"_a,"forces"_a = py::array_t<uammd::real>(),"result"_a).
+    def("MdotNearField", &UAMMD::MdotNearField, "Computes only the far field contribution",
+	"positions"_a,"forces"_a = py::array_t<uammd::real>(),"result"_a).
+    def("MdotFarField", &UAMMD::MdotFarField, "Computes only the deterministic part of the near field contribution",
+	"positions"_a,"forces"_a= py::array_t<uammd::real>(),"result"_a);
 
     
   py::class_<uammd::Box>(m, "Box").
@@ -145,8 +135,7 @@ PYBIND11_MODULE(uammd, m) {
 	"box (L = " + std::to_string(p.box.boxSize.x) +
 	"," + std::to_string(p.box.boxSize.y) + "," + std::to_string(p.box.boxSize.z) + ")\n"+
 	"tolerance = " + std::to_string(p. tolerance)+ "\n" + 
-	"psi = " + std::to_string(p. psi) + "\n" +
-	"shearStrain = " + std::to_string(p.shearStrain);
+	"psi = " + std::to_string(p. psi) + "\n" +	"shearStrain = " + std::to_string(p.shearStrain);
     });
     
     }

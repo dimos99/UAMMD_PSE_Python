@@ -18,6 +18,6 @@ LDFLAGS=-lcufft -lcublas -llapacke -lcblas
 LIBRARY_NAME=$(MODULE_NAME)`$(PYTHON)-config --extension-suffix`
 FILE=UAMMD_PSE_python_wrapper.cu
 all:
-	$(NVCC) -w -shared -std=c++11 -DMAXLOGLEVEL=$(VERBOSITY) $(DOUBLEPRECISION) $(INCLUDE_FLAGS) -Xcompiler "-fPIC -w"  $(FILE) -o $(LIBRARY_NAME) $(LDFLAGS)
+	$(NVCC) -w -shared -std=c++14 -DMAXLOGLEVEL=$(VERBOSITY) $(DOUBLEPRECISION) $(INCLUDE_FLAGS) -Xcompiler "-fPIC -w"  $(FILE) -o $(LIBRARY_NAME) $(LDFLAGS)
 clean:
 	rm $(LIBRARY_NAME)
