@@ -15,10 +15,7 @@ git clone --recursive https://github.com/RaulPPelaez/UAMMD_PSE_Python
 
 You need the CUDA toolkit installed, I tested up to the latest version at the moment (CUDA 11).  
 
-The PSE module uses cufft, cublas, lapacke and cblas which need to be available during compilation. CuFFT and CuBLAS should be available as part of the CUDA installation.  
-
-Lapacke and cblas are not actually needed, they are only used for to compute fluctuations, a capability which this code does not expose. Still the code is included so it must be compiled with them. Both can be replaced by intels MKL libraries via Makefile, you could even replace them with a stub given that no function in these libraries will be actually called.
-
+The PSE module uses cufft, cublas, lapacke and cblas which need to be available during compilation. CuFFT and CuBLAS should be available as part of the CUDA installation.
 
 ### Compilation
 
@@ -35,9 +32,10 @@ Mdot expects positions and forces to be in a one dimensional array with interlea
 import uammd
 numberParticles = 20000;
 L=120.0;
-par = uammd.PSEParameters(psi=0.3, viscosity=1.0, hydrodynamicRadius=1.0, tolerance=1e-4, box=uammd.Box(L,L,L));
+par = uammd.PSEParameters(psi=0.3, viscosity=1.0, hydrodynamicRadius=1.0, tolerance=1e-4, box=uammd.Box(L,L,L), temperature=1.0);
 pse = uammd.UAMMD(par, numberParticles);
 ...
 pse.Mdot(positions, forces, MF)
 
 ```
+The function Mdot computes the full hydrodynamic displacements (including the deterministic and stochastic ones). If the "forces" argument is ommited only the stochastic contribution is computed. On the other hand, setting temperature=0 will result in only the deterministic part being computed.
