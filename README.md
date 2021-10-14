@@ -39,3 +39,17 @@ pse.Mdot(positions, forces, MF)
 
 ```
 The function Mdot computes the full hydrodynamic displacements (including the deterministic and stochastic ones). If the "forces" argument is ommited only the stochastic contribution is computed. On the other hand, setting temperature=0 will result in only the deterministic part being computed.
+
+PSE uses Ewald splitting, with a Near and Far field contribution. Each part of the computation can be computed separatedly with  
+
+```python
+pse.MdotNearField(positions, forces, MF)
+pse.MdotFarField(positions, forces, MF)
+
+```
+
+Finally, the shearStrain parameter allows to use sheared boxes.  
+
+### C++ interface  
+
+The module can also be called from C++ by including uammd_interface.h. See example.cpp.  
