@@ -39,8 +39,9 @@ struct UAMMD_PSE {
   thrust::device_vector<real> d_MF;
   thrust::device_vector<real3> tmp;
   int numberParticles;
+  bool computeFluctuations = false;
   cudaStream_t st;
-  UAMMD_PSE(PyParameters par, int numberParticles): numberParticles(numberParticles){
+  UAMMD_PSE(PyParameters par, int numberParticles): numberParticles(numberParticles){   
     this->sys = std::make_shared<System>();
     this->pd = std::make_shared<ParticleData>(numberParticles, sys);
     auto pg = std::make_shared<ParticleGroup>(pd, sys, "All");
@@ -48,14 +49,29 @@ struct UAMMD_PSE {
     d_MF.resize(3*numberParticles);
     tmp.resize(numberParticles);
     CudaSafeCall(cudaStreamCreate(&st));
+    if(par.temperature) this->computeFluctuations = true;
   }
 
   void Mdot(const real* h_pos,
 	    const real* h_F,
 	    real* h_MF){
+    if(this->computeFluctuations){
+      System::log<System::WARNING>("The Mdot function will not yield the correct fluctuations. Use computeHydrodynamicDisplacements instead");
+    }
     uploadPosAndForceToUAMMD(h_pos, h_F);
     auto d_MF_ptr = (real3*)(thrust::raw_pointer_cast(d_MF.data()));
     pse->computeMF(d_MF_ptr, st);
+    thrust::copy(d_MF.begin(), d_MF.end(), h_MF);
+  }
+
+  void computeHydrodynamicDisplacements(const real* h_pos,
+					const real* h_F,
+					real* h_MF){
+    uploadPosAndForceToUAMMD(h_pos, h_F);
+    auto d_MF_ptr = (real3*)(thrust::raw_pointer_cast(d_MF.data()));
+    pse->computeMF(d_MF_ptr, st);
+    if(this->computeFluctuations)
+      pse->computeBdW(d_MF_ptr, st);
     thrust::copy(d_MF.begin(), d_MF.end(), h_MF);
   }
 
