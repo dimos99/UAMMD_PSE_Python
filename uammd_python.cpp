@@ -31,6 +31,17 @@ struct UAMMD_PSE_Python {
 		    py::array_t<real> h_MF){
     pse->MdotFarField(h_pos.data(), h_F.data(), h_MF.mutable_data());
   }
+
+  void computeHydrodynamicDisplacements(py::array_t<real> h_pos,
+					py::array_t<real> h_F,
+					py::array_t<real> h_MF){
+    pse->computeHydrodynamicDisplacements(h_pos.data(), h_F.data(), h_MF.mutable_data());
+  }
+
+  void clean(){
+    pse->clean();
+  }
+
 };
 
 
@@ -46,7 +57,12 @@ PYBIND11_MODULE(uammd, m) {
     def("MdotNearField", &UAMMD_PSE_Python::MdotNearField, "Computes only the far field contribution",
 	"positions"_a,"forces"_a = py::array_t<real>(),"result"_a).
     def("MdotFarField", &UAMMD_PSE_Python::MdotFarField, "Computes only the deterministic part of the near field contribution",
-	"positions"_a,"forces"_a= py::array_t<real>(),"result"_a);
+	"positions"_a,"forces"_a= py::array_t<real>(),"result"_a).
+    def("computeHydrodynamicDisplacements", &UAMMD_PSE_Python::computeHydrodynamicDisplacements,
+	"Computes the hydrodynamic (deterministic and stochastic) displacements. If the forces are ommited only the stochastic part is computed. If the temperature is zero (default) the stochastic part is ommited.",
+	"positions"_a,"forces"_a = py::array_t<real>(),"result"_a).
+    def("clean", &UAMMD_PSE_Python::clean, "Frees any memory allocated by UAMMD");
+  
 
     
   py::class_<PyParameters>(m, "PSEParameters").

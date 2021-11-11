@@ -5,9 +5,15 @@
  */
 #include <uammd.cuh>
 #include <Integrator/BDHI/BDHI_PSE.cuh>
+#include <Integrator/BDHI/BDHI_FCM.cuh>
 #include"uammd_interface.h"
+
 using namespace uammd;
 using PSE = BDHI::PSE;
+using Kernel = BDHI::FCM_ns::Kernels::Gaussian;
+using KernelTorque = BDHI::FCM_ns::Kernels::GaussianTorque;
+using FCM = BDHI::FCM_impl<Kernel, KernelTorque>;      
+
 using Parameters = PSE::Parameters;
 
 struct Real3ToReal4{
@@ -31,11 +37,23 @@ Parameters toPSEParameters(PyParameters par){
   return psepar;  
 }
 
+FCM::Parameters toFCMParameters(PyParameters par){
+  FCM::Parameters fcmpar;
+  fcmpar.temperature = par.temperature;
+  fcmpar.viscosity = par.viscosity;
+  fcmpar.hydrodynamicRadius = par.hydrodynamicRadius;
+  fcmpar.dt = par.dt;
+  fcmpar.box = Box(make_real3(par.Lx, par.Ly, par.Lz));
+  fcmpar.tolerance = par.tolerance;
+  return fcmpar;  
+}
+
 struct UAMMD_PSE {
   using real = real;
   std::shared_ptr<System> sys;
   std::shared_ptr<ParticleData> pd;
   std::shared_ptr<PSE> pse;
+  std::shared_ptr<FCM> fcm;
   thrust::device_vector<real> d_MF;
   thrust::device_vector<real3> tmp;
   int numberParticles;
@@ -45,7 +63,15 @@ struct UAMMD_PSE {
     this->sys = std::make_shared<System>();
     this->pd = std::make_shared<ParticleData>(numberParticles, sys);
     auto pg = std::make_shared<ParticleGroup>(pd, sys, "All");
-    this->pse = std::make_shared<PSE>(pd, pg, sys, toPSEParameters(par));
+    if(par.psi <= 0){
+      if(par.shearStrain != 0){
+	sys->log<System::EXCEPTION>("The non Ewald split FCM has no shear strain functionality");
+	throw std::runtime_error("Not implemented");
+      }
+      this->fcm = std::make_shared<FCM>(toFCMParameters(par));
+    }
+    else
+      this->pse = std::make_shared<PSE>(pd, pg, sys, toPSEParameters(par));
     d_MF.resize(3*numberParticles);
     tmp.resize(numberParticles);
     CudaSafeCall(cudaStreamCreate(&st));
@@ -60,7 +86,7 @@ struct UAMMD_PSE {
     }
     uploadPosAndForceToUAMMD(h_pos, h_F);
     auto d_MF_ptr = (real3*)(thrust::raw_pointer_cast(d_MF.data()));
-    pse->computeMF(d_MF_ptr, st);
+    this->computeMF(d_MF_ptr, st);
     thrust::copy(d_MF.begin(), d_MF.end(), h_MF);
   }
 
@@ -68,11 +94,22 @@ struct UAMMD_PSE {
 					const real* h_F,
 					real* h_MF){
     uploadPosAndForceToUAMMD(h_pos, h_F);
-    auto d_MF_ptr = (real3*)(thrust::raw_pointer_cast(d_MF.data()));
-    pse->computeMF(d_MF_ptr, st);
-    if(this->computeFluctuations)
-      pse->computeBdW(d_MF_ptr, st);
-    thrust::copy(d_MF.begin(), d_MF.end(), h_MF);
+    auto force = h_F?pd->getForce(access::gpu, access::read).begin():nullptr;
+    if(pse){
+      auto d_MF_ptr = (real3*)(thrust::raw_pointer_cast(d_MF.data()));    
+      pse->computeHydrodynamicDisplacements(force, d_MF_ptr, st);
+      thrust::copy(d_MF.begin(), d_MF.end(), h_MF);
+    }
+    else if(fcm){
+      auto pos = pd->getPos(access::gpu, access::read).begin();
+      auto XT = fcm->computeHydrodynamicDisplacements(pos, force, nullptr, numberParticles, st);
+      thrust::copy(XT.first.begin(), XT.first.end(), (real3*)h_MF);
+    }
+    else{
+      sys->log<System::EXCEPTION>("PSE and FCM Modules are in an invalid state");
+      throw std::runtime_error("[PSE]Invalid state");
+    }
+
   }
 
   void MdotNearField(const real* h_pos,
@@ -98,6 +135,17 @@ struct UAMMD_PSE {
     cudaStreamDestroy(st);
   }
 
+  void clean(){
+    cudaDeviceSynchronize();
+    d_MF.clear();
+    tmp.clear();
+    fcm.reset();
+    pse.reset();
+    pd.reset();
+    sys->finish();
+    sys.reset();
+  }
+
 private:
   void uploadPosAndForceToUAMMD(const real* h_pos, const real* h_F){
     auto pos = pd->getPos(access::location::gpu, access::mode::write);
@@ -108,6 +156,38 @@ private:
       thrust::copy((real3*)h_F, (real3*)h_F + numberParticles, tmp.begin());
       thrust::transform(thrust::cuda::par.on(st), tmp.begin(), tmp.end(), forces.begin(), Real3ToReal4());
     }   
+  }
+
+  void computeMF(real3* d_MF_ptr, cudaStream_t st=0){
+    if(pse)
+      pse->computeMF(d_MF_ptr, st);
+    else if(fcm){
+      if(this->computeFluctuations){
+	System::log<System::WARNING>("The computeMF function will add fluctuations. Do not use this function in non-Ewald mode.");
+      }
+      auto pos = pd->getPos(access::gpu, access::read).begin();
+      auto force = pd->getForce(access::gpu, access::read).begin();
+      auto XT = fcm->computeHydrodynamicDisplacements(pos, force, nullptr, numberParticles, st);
+      thrust::copy(XT.first.begin(), XT.first.end(), d_MF_ptr);
+    }
+    else{
+      sys->log<System::EXCEPTION>("PSE and FCM Modules are in an invalid state");
+      throw std::runtime_error("[PSE]Invalid state");
+    }
+  }
+
+  void computeBdW(real3* d_MF_ptr, cudaStream_t st=0){
+    if(pse)
+      pse->computeBdW(d_MF_ptr, st);
+    else if(fcm){
+      auto pos = pd->getPos(access::gpu, access::read).begin();
+      auto XT = fcm->computeHydrodynamicDisplacements(pos, nullptr, nullptr, numberParticles, st);
+      thrust::copy(XT.first.begin(), XT.first.end(), d_MF_ptr);
+    }
+    else{
+      sys->log<System::EXCEPTION>("PSE and FCM Modules are in an invalid state");
+      throw std::runtime_error("[PSE]Invalid state");
+    }
   }
 };
 
@@ -126,4 +206,14 @@ void UAMMD_PSE_Glue::MdotNearField(const real* h_pos, const real* h_F, real* h_M
 
 void UAMMD_PSE_Glue::MdotFarField(const real* h_pos, const real* h_F, real* h_MF){
   pse->MdotFarField(h_pos, h_F, h_MF);
+}
+
+void UAMMD_PSE_Glue::computeHydrodynamicDisplacements(const real* h_pos,
+						      const real* h_F,
+						      real* h_MF){
+  pse->computeHydrodynamicDisplacements(h_pos, h_F, h_MF);
+}
+
+void UAMMD_PSE_Glue::clean(){
+  pse->clean();
 }

@@ -41,4 +41,7 @@ public:
 
   void MdotFarField(const real* h_pos, const real* h_F, real* h_MF);
 
+  void computeHydrodynamicDisplacements(const real* h_pos, const real* h_F, real* h_MF);
+
+  void clean();
 };
