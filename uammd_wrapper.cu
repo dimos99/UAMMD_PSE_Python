@@ -29,7 +29,7 @@ Parameters toPSEParameters(PyParameters par){
   psepar.temperature = par.temperature;
   psepar.viscosity = par.viscosity;
   psepar.hydrodynamicRadius = par.hydrodynamicRadius;
-  psepar.dt = par.dt;
+  psepar.dt = 1;
   psepar.box = Box(make_real3(par.Lx, par.Ly, par.Lz));
   psepar.tolerance = par.tolerance;
   psepar.psi = par.psi;
@@ -42,7 +42,7 @@ FCM::Parameters toFCMParameters(PyParameters par){
   fcmpar.temperature = par.temperature;
   fcmpar.viscosity = par.viscosity;
   fcmpar.hydrodynamicRadius = par.hydrodynamicRadius;
-  fcmpar.dt = par.dt;
+  fcmpar.dt = 1;
   fcmpar.box = Box(make_real3(par.Lx, par.Ly, par.Lz));
   fcmpar.tolerance = par.tolerance;
   return fcmpar;  
@@ -95,7 +95,7 @@ struct UAMMD_PSE {
 					real* h_MF){
     uploadPosAndForceToUAMMD(h_pos, h_F);
     auto force = h_F?pd->getForce(access::gpu, access::read).begin():nullptr;
-    if(pse){
+    if(pse){      
       auto d_MF_ptr = (real3*)(thrust::raw_pointer_cast(d_MF.data()));    
       pse->computeHydrodynamicDisplacements(force, d_MF_ptr, st);
       thrust::copy(d_MF.begin(), d_MF.end(), h_MF);
@@ -109,7 +109,6 @@ struct UAMMD_PSE {
       sys->log<System::EXCEPTION>("PSE and FCM Modules are in an invalid state");
       throw std::runtime_error("[PSE]Invalid state");
     }
-
   }
 
   void MdotNearField(const real* h_pos,

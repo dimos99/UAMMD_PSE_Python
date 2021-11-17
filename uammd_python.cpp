@@ -87,7 +87,7 @@ PYBIND11_MODULE(uammd, m) {
       tmp->shearStrain = shearStrain;
       return tmp;	
     }),"temperature"_a = 0.0,"viscosity"_a  = 1.0,"hydrodynamicRadius"_a = 1.0,
-	"dt"_a = 0.0,"Lx"_a = 0.0, "Ly"_a = 0.0, "Lz"_a = 0.0 ,"tolerance"_a = 1e-4,"psi"_a=1.0, "shearStrain"_a = 0.0).
+	"dt"_a = 1.0,"Lx"_a = 0.0, "Ly"_a = 0.0, "Lz"_a = 0.0 ,"tolerance"_a = 1e-4,"psi"_a=1.0, "shearStrain"_a = 0.0).
     def_readwrite("temperature", &PyParameters::temperature).
     def_readwrite("viscosity", &PyParameters::viscosity).
     def_readwrite("hydrodynamicRadius", &PyParameters::hydrodynamicRadius).
