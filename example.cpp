@@ -7,6 +7,7 @@
 #include<iostream>
 #include<random>
 #include<algorithm>
+using namespace uammd_pse;
 using PSE = UAMMD_PSE_Glue;
 using PSEParameters = PyParameters;
 using namespace std;

@@ -5,7 +5,7 @@
 #include<pybind11/pybind11.h>
 #include<pybind11/numpy.h>
 #include "uammd_interface.h"
-
+using namespace uammd_pse;
 namespace py = pybind11;
 
 struct UAMMD_PSE_Python {
