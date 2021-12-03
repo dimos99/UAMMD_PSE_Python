@@ -20,10 +20,8 @@ namespace uammd_pse{
   }
 
   struct PyParameters{
-    real temperature;
     real viscosity;
     real hydrodynamicRadius;
-    real dt = 1;
     real Lx, Ly, Lz;
     real tolerance;
     real psi;
@@ -37,13 +35,12 @@ namespace uammd_pse{
 
     UAMMD_PSE_Glue(PyParameters pypar, int numberParticles);
 
-    void Mdot(const real* h_pos, const real* h_F, real* h_MF);
-
     void MdotNearField(const real* h_pos, const real* h_F, real* h_MF);
 
     void MdotFarField(const real* h_pos, const real* h_F, real* h_MF);
 
-    void computeHydrodynamicDisplacements(const real* h_pos, const real* h_F, real* h_MF);
+    void computeHydrodynamicDisplacements(const real* h_pos, const real* h_F, real* h_MF,
+					  real temperature, real prefactor);
 
     void clean();
   };

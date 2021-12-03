@@ -15,7 +15,6 @@ using namespace std;
 //Some arbitrary parameters
 auto createParameters(){
   PSEParameters par;
-  par.temperature = 0.1;
   par.viscosity = 1.0;
   par.hydrodynamicRadius = 1.0;
   par.Lx = 120.0;
@@ -43,8 +42,12 @@ int main(){
   auto pos = createRandomVector(3*numberParticles, par.Lx);
   auto forces = createRandomVector(3*numberParticles, par.Lx);
   std::vector<real> MF(3*numberParticles, 0);
-  pse.Mdot(pos.data(), forces.data(), MF.data());
-  //Each part can be requested independently
+  real temperature = 0;
+  real prefactor = 0;
+  //Computes res = M*F + prefactor*sqrt(2*temperature*M)*dW
+  //The Weinner process, dW, is different every time
+  pse.computeHydrodynamicDisplacements(pos.data(), forces.data(), MF.data(), temperature, prefactor);
+  //Each part of the deterministic computation can be requested independently
   // pse.MdotNearField(pos.data(), forces.data(), MF.data());
   // pse.MdotFarField(pos.data(), forces.data(), MF.data());
   for(int i = 0; i< 3*10; i++){

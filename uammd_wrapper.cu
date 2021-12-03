@@ -27,10 +27,8 @@ namespace uammd_pse{
 
   Parameters toPSEParameters(PyParameters par){
     Parameters psepar;
-    psepar.temperature = par.temperature;
     psepar.viscosity = par.viscosity;
     psepar.hydrodynamicRadius = par.hydrodynamicRadius;
-    psepar.dt = 1;
     psepar.box = Box(make_real3(par.Lx, par.Ly, par.Lz));
     psepar.tolerance = par.tolerance;
     psepar.psi = par.psi;
@@ -40,10 +38,8 @@ namespace uammd_pse{
 
   FCM::Parameters toFCMParameters(PyParameters par){
     FCM::Parameters fcmpar;
-    fcmpar.temperature = par.temperature;
     fcmpar.viscosity = par.viscosity;
     fcmpar.hydrodynamicRadius = par.hydrodynamicRadius;
-    fcmpar.dt = 1;
     fcmpar.box = Box(make_real3(par.Lx, par.Ly, par.Lz));
     fcmpar.tolerance = par.tolerance;
     return fcmpar;  
@@ -58,9 +54,8 @@ namespace uammd_pse{
     thrust::device_vector<real> d_MF;
     thrust::device_vector<real3> tmp;
     int numberParticles;
-    bool computeFluctuations = false;
     cudaStream_t st;
-    UAMMD_PSE(PyParameters par, int numberParticles): numberParticles(numberParticles){   
+    UAMMD_PSE(PyParameters par, int numberParticles): numberParticles(numberParticles){
       this->sys = std::make_shared<System>();
       this->pd = std::make_shared<ParticleData>(numberParticles, sys);
       auto pg = std::make_shared<ParticleGroup>(pd, sys, "All");
@@ -76,35 +71,20 @@ namespace uammd_pse{
       d_MF.resize(3*numberParticles);
       tmp.resize(numberParticles);
       CudaSafeCall(cudaStreamCreate(&st));
-      if(par.temperature) this->computeFluctuations = true;
     }
 
-    void Mdot(const real* h_pos,
-	      const real* h_F,
-	      real* h_MF){
-      if(this->computeFluctuations){
-	System::log<System::WARNING>("The Mdot function will not yield the correct fluctuations. Use computeHydrodynamicDisplacements instead");
-      }
-      uploadPosAndForceToUAMMD(h_pos, h_F);
-      auto d_MF_ptr = (real3*)(thrust::raw_pointer_cast(d_MF.data()));
-      this->computeMF(d_MF_ptr, st);
-      thrust::copy(d_MF.begin(), d_MF.end(), h_MF);
-    }
-
-    void computeHydrodynamicDisplacements(const real* h_pos,
-					  const real* h_F,
-					  real* h_MF){
+    void computeHydrodynamicDisplacements(const real* h_pos, const real* h_F, real* h_result, real temperature, real prefactor){
       uploadPosAndForceToUAMMD(h_pos, h_F);
       auto force = h_F?pd->getForce(access::gpu, access::read).begin():nullptr;
       if(pse){      
 	auto d_MF_ptr = (real3*)(thrust::raw_pointer_cast(d_MF.data()));    
-	pse->computeHydrodynamicDisplacements(force, d_MF_ptr, st);
-	thrust::copy(d_MF.begin(), d_MF.end(), h_MF);
+	pse->computeHydrodynamicDisplacements(force, d_MF_ptr, temperature, prefactor, st);
+	thrust::copy(d_MF.begin(), d_MF.end(), h_result);
       }
       else if(fcm){
 	auto pos = pd->getPos(access::gpu, access::read).begin();
-	auto XT = fcm->computeHydrodynamicDisplacements(pos, force, nullptr, numberParticles, st);
-	thrust::copy(XT.first.begin(), XT.first.end(), (real3*)h_MF);
+	auto XT = fcm->computeHydrodynamicDisplacements(pos, force, nullptr, numberParticles, temperature, prefactor, st);
+	thrust::copy(XT.first.begin(), XT.first.end(), (real3*)h_result);
       }
       else{
 	sys->log<System::EXCEPTION>("PSE and FCM Modules are in an invalid state");
@@ -157,60 +137,23 @@ namespace uammd_pse{
 	thrust::transform(thrust::cuda::par.on(st), tmp.begin(), tmp.end(), forces.begin(), Real3ToReal4());
       }   
     }
-
-    void computeMF(real3* d_MF_ptr, cudaStream_t st=0){
-      if(pse)
-	pse->computeMF(d_MF_ptr, st);
-      else if(fcm){
-	if(this->computeFluctuations){
-	  System::log<System::WARNING>("The computeMF function will add fluctuations. Do not use this function in non-Ewald mode.");
-	}
-	auto pos = pd->getPos(access::gpu, access::read).begin();
-	auto force = pd->getForce(access::gpu, access::read).begin();
-	auto XT = fcm->computeHydrodynamicDisplacements(pos, force, nullptr, numberParticles, st);
-	thrust::copy(XT.first.begin(), XT.first.end(), d_MF_ptr);
-      }
-      else{
-	sys->log<System::EXCEPTION>("PSE and FCM Modules are in an invalid state");
-	throw std::runtime_error("[PSE]Invalid state");
-      }
-    }
-
-    void computeBdW(real3* d_MF_ptr, cudaStream_t st=0){
-      if(pse)
-	pse->computeBdW(d_MF_ptr, st);
-      else if(fcm){
-	auto pos = pd->getPos(access::gpu, access::read).begin();
-	auto XT = fcm->computeHydrodynamicDisplacements(pos, nullptr, nullptr, numberParticles, st);
-	thrust::copy(XT.first.begin(), XT.first.end(), d_MF_ptr);
-      }
-      else{
-	sys->log<System::EXCEPTION>("PSE and FCM Modules are in an invalid state");
-	throw std::runtime_error("[PSE]Invalid state");
-      }
-    }
   };
 
   UAMMD_PSE_Glue::UAMMD_PSE_Glue(PyParameters pypar, int numberParticles){
     pse = std::make_shared<UAMMD_PSE>(pypar, numberParticles);
   }
 
-  void UAMMD_PSE_Glue::Mdot(const real* h_pos, const real* h_F, real* h_MF){
-    pse->Mdot(h_pos, h_F, h_MF);
+  void UAMMD_PSE_Glue::computeHydrodynamicDisplacements(const real* h_pos, const real* h_F, real* h_result,
+							real temperature, real prefactor){
+    pse->computeHydrodynamicDisplacements(h_pos, h_F, h_result, temperature, prefactor);
   }
-
+     
   void UAMMD_PSE_Glue::MdotNearField(const real* h_pos, const real* h_F, real* h_MF){
     pse->MdotNearField(h_pos, h_F, h_MF);
   }
 
   void UAMMD_PSE_Glue::MdotFarField(const real* h_pos, const real* h_F, real* h_MF){
     pse->MdotFarField(h_pos, h_F, h_MF);
-  }
-
-  void UAMMD_PSE_Glue::computeHydrodynamicDisplacements(const real* h_pos,
-							const real* h_F,
-							real* h_MF){
-    pse->computeHydrodynamicDisplacements(h_pos, h_F, h_MF);
   }
 
   void UAMMD_PSE_Glue::clean(){
