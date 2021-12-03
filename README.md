@@ -32,15 +32,15 @@ Mdot expects positions and forces to be in a one dimensional array with interlea
 import uammd
 numberParticles = 20000;
 L=120.0;
-par = uammd.PSEParameters(psi=0.3, viscosity=1.0, hydrodynamicRadius=1.0, tolerance=1e-4, box=uammd.Box(L,L,L), temperature=1.0);
+par = uammd.PSEParameters(psi=0.3, viscosity=1.0, hydrodynamicRadius=1.0, tolerance=1e-4, box=uammd.Box(L,L,L));
 pse = uammd.UAMMD(par, numberParticles);
 ...
-pse.Mdot(positions, forces, MF)
+pse.computeHydrodynamicDisplacements(positions, forces, MF, temperature = 1.0, prefactor = 1.0)
 
 ```
-The function Mdot computes the full hydrodynamic displacements (including the deterministic and stochastic ones). If the "forces" argument is ommited only the stochastic contribution is computed. On the other hand, setting temperature=0 will result in only the deterministic part being computed.
+The function ```computeHydrodynamicDisplacements``` computes the full hydrodynamic displacements (including the deterministic and stochastic ones). If the "forces" argument is ommited only the stochastic contribution is computed. On the other hand, setting temperature=0 will result in only the deterministic part being computed. The prefactor affects the stochastic part, the result MF will be ```MF = Mobility*forces + prefactor*sqrt(2*temperature*Mobility)*dW)```.  
 
-PSE uses Ewald splitting, with a Near and Far field contribution. Each part of the computation can be computed separatedly with  
+PSE uses Ewald splitting, with a Near and Far field contribution. Each part of the deterministic computation can be computed separatedly with  
 
 ```python
 pse.MdotNearField(positions, forces, MF)

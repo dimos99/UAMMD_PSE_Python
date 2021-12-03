@@ -5,7 +5,7 @@ import numpy as np
 
 numberParticles = 20000;
 L=120.0;
-par = uammd.PSEParameters(psi=0.3, viscosity=1.0, hydrodynamicRadius=1.0, tolerance=1e-4, temperature=0,
+par = uammd.PSEParameters(psi=0.3, viscosity=1.0, hydrodynamicRadius=1.0, tolerance=1e-4,
                           Lx=L, Ly=L, Lz=L, shearStrain=0.0);
 pse = uammd.UAMMD(par, numberParticles);
 
@@ -17,15 +17,6 @@ forces = np.array((np.random.rand(3*numberParticles)-0.5), np.float32);
 #It is really important that the result array has the same floating precision as the compiled uammd, otherwise
 # python will just silently pass by copy and the results will be lost
 MF=np.zeros(3*numberParticles, np.float32);
-pse.Mdot(positions, forces, MF)
-print(MF)
-MF=np.zeros(3*numberParticles, np.float32);
-pse.Mdot(positions, forces, MF)
-print(MF)
-MF=np.zeros(3*numberParticles, np.float32);
-pse.computeHydrodynamicDisplacements(positions, forces, MF);
-print(MF)
-MF=np.zeros(3*numberParticles, np.float32);
-pse.computeHydrodynamicDisplacements(positions, forces, MF);
+pse.computeHydrodynamicDisplacements(positions, forces, temperature = 0, prefactor = 0, MF)
 print(MF)
 
