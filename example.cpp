@@ -1,4 +1,4 @@
-/* Raul P. Pelaez 2021. Example usage of the c++ PSE interface. See example.py for the python interface
+/* Raul P. Pelaez 2021-2022. Example usage of the c++ PSE interface. See example.py for the python interface
    Computes the hydrodynamic displacements for a group of randomly placed particles with forces acting on them.
    Also includes fluctuations if temperature !=0
  */
@@ -50,6 +50,8 @@ int main(){
   //Each part of the deterministic computation can be requested independently
   // pse.MdotNearField(pos.data(), forces.data(), MF.data());
   // pse.MdotFarField(pos.data(), forces.data(), MF.data());
+  //We can also change the shearStrain
+  // pse.setShearStrain(1.0);
   for(int i = 0; i< 3*10; i++){
     std::cout<<MF[i]<<" ";
     if(i%3==2) std::cout<<std::endl;

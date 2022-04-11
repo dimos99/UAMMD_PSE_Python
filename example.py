@@ -1,4 +1,4 @@
-#Raul P. Pelaez 2021. Example usage of the UAMMD's PSE module (see uammd_python.cpp for more info on the wrapper)
+#Raul P. Pelaez 2021-2022. Example usage of the UAMMD's PSE module (see uammd_python.cpp for more info on the wrapper)
 #Computes the hydrodynamic displacements of a group of particles due to thermal fluctuations and/or forces acting on them.
 import uammd
 import numpy as np
@@ -18,5 +18,7 @@ forces = np.array((np.random.rand(3*numberParticles)-0.5), np.float32);
 # python will just silently pass by copy and the results will be lost
 MF=np.zeros(3*numberParticles, np.float32);
 pse.computeHydrodynamicDisplacements(positions, forces, temperature = 0, prefactor = 0, MF)
+# We can also change the shear strain at any point
+pse.setShearStrain(1.0)
 print(MF)
 

@@ -1,4 +1,4 @@
-/*Raul P. Pelaez 2021.
+/*Raul P. Pelaez 2021-2022.
   An interface code between uammd_wrapper.cu and uammd_python.cpp.
  */
 #ifndef UAMMD_INTERFACE_H
@@ -41,6 +41,8 @@ namespace uammd_pse{
 
     void computeHydrodynamicDisplacements(const real* h_pos, const real* h_F, real* h_MF,
 					  real temperature, real prefactor);
+
+    void setShearStrain(real newStrain);
 
     void clean();
   };

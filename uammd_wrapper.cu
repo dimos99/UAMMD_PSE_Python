@@ -1,4 +1,4 @@
-/*Raul P. Pelaez 2021. This code exposes in a class the UAMMD's PSE module.
+/*Raul P. Pelaez 2021-2022. This code exposes in a class the UAMMD's PSE module.
   Allows to compute the hydrodynamic displacements of a group of particles due to thermal fluctuations and/or forces acting on them.
   See example.cpp for usage instructions.
   See example.py for usage from python.
@@ -58,7 +58,7 @@ namespace uammd_pse{
     UAMMD_PSE(PyParameters par, int numberParticles): numberParticles(numberParticles){
       this->sys = std::make_shared<System>();
       this->pd = std::make_shared<ParticleData>(numberParticles, sys);
-      auto pg = std::make_shared<ParticleGroup>(pd, sys, "All");
+      auto pg = std::make_shared<ParticleGroup>(pd, "All");
       if(par.psi <= 0){
 	if(par.shearStrain != 0){
 	  sys->log<System::EXCEPTION>("The non Ewald split FCM has no shear strain functionality");
@@ -67,7 +67,7 @@ namespace uammd_pse{
 	this->fcm = std::make_shared<FCM>(toFCMParameters(par));
       }
       else
-	this->pse = std::make_shared<PSE>(pd, pg, sys, toPSEParameters(par));
+	this->pse = std::make_shared<PSE>(pg, toPSEParameters(par));
       d_MF.resize(3*numberParticles);
       tmp.resize(numberParticles);
       CudaSafeCall(cudaStreamCreate(&st));
@@ -108,6 +108,14 @@ namespace uammd_pse{
       auto d_MF_ptr = (real3*)(thrust::raw_pointer_cast(d_MF.data()));
       pse->computeMFFarField(d_MF_ptr, st);
       thrust::copy(d_MF.begin(), d_MF.end(), h_MF);
+    }
+
+    void setShearStrain(real newStrain){
+      if(fcm){
+	sys->log<System::EXCEPTION>("The non Ewald split FCM has no shear strain functionality");
+	throw std::runtime_error("Not implemented");
+      }
+      pse->setShearStrain(newStrain);
     }
 
     ~UAMMD_PSE(){

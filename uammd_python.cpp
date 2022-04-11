@@ -1,4 +1,4 @@
-/*Raul P. Pelaez 2021. This code exposes the UAMMD's PSE module to python.
+/*Raul P. Pelaez 2021-2022. This code exposes the UAMMD's PSE module to python.
   Allows to compute the hydrodynamic displacements of a group of particles due to thermal fluctuations and/or forces acting on them.  
   See example.py for usage from python.  
  */
@@ -34,6 +34,10 @@ struct UAMMD_PSE_Python {
 					  temperature, prefactor);
   }
 
+  void setShearStrain(real newStrain){
+    pse->setShearStrain(newStrain);
+  }
+
   void clean(){
     pse->clean();
   }
@@ -55,6 +59,8 @@ PYBIND11_MODULE(uammd, m) {
     def("computeHydrodynamicDisplacements", &UAMMD_PSE_Python::computeHydrodynamicDisplacements,
 	"Computes the hydrodynamic (deterministic and/or stochastic) displacements. If the forces are ommited only the stochastic part is computed. If the temperature is zero (default) the stochastic part is ommited.",
 	"positions"_a,"forces"_a = py::array_t<real>(),"result"_a, "temperature"_a = 0, "prefactor"_a = 0).
+    def("setShearStrain", &UAMMD_PSE_Python::setShearStrain, "Sets a new value for the shear strain (only in PSE mode).",
+	"newShearStrain"_a).
     def("clean", &UAMMD_PSE_Python::clean, "Frees any memory allocated by UAMMD");
     
   py::class_<PyParameters>(m, "PSEParameters").
