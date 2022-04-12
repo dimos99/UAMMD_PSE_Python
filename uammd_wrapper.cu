@@ -164,6 +164,10 @@ namespace uammd_pse{
     pse->MdotFarField(h_pos, h_F, h_MF);
   }
 
+  void UAMMD_PSE_Glue::setShearStrain(real newStrain){
+    pse->setShearStrain(newStrain);
+  }
+
   void UAMMD_PSE_Glue::clean(){
     pse->clean();
   }
