@@ -16,17 +16,17 @@ VERBOSITY=0
 #You can replace  intel's MKL by lapacke and cblas by removing -DUSE_MKL (in the include flags above) and linking with that instead
 ifeq ($(MKLROOT),)
 LAPACKINCLUDE=-I/usr/include/lapacke -I/usr/include/cblas
-LAPACKLIBS=-llapacke -lcblas
+LAPACK_LIBS=-llapacke -lcblas
 else
 LAPACKINCLUDE=-I$(MKLROOT)/include -L$(MKLROOT)/lib/intel64 -DUSE_MKL
-LAPACKLIBS=-lmkl_rt -lpthread -ldl
+LAPACK_LIBS=-lmkl_rt -lpthread -ldl
 endif
 
 INCLUDE_FLAGS_GPU= -I$(UAMMD_ROOT)/src -I$(UAMMD_ROOT)/src/third_party $(LAPACKINCLUDE)
 
 INCLUDE_FLAGS= `$(PYTHON)-config --includes` -I $(PYBIND_ROOT)/include/
 
-LDFLAGS_GPU= -L/usr/lib64 -lcufft -lcublas $(LAPACKLIBS)
+LDFLAGS_GPU= -L/usr/lib64 -lcufft -lcublas $(LAPACK_LIBS)
 
 GPU_OPTIMIZATION= -O3
 CPU_OPTIMIZATION= -O3
