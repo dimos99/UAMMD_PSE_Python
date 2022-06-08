@@ -35,14 +35,14 @@ PYTHON_WRAPPER_DIR:=$(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
 all: $(LIBRARY_NAME) example
 
-uammd_wrapper.o: $(PYTHON_WRAPPER_DIR)/uammd_wrapper.cu $(PYTHON_WRAPPER_DIR)/uammd_interface.h 
+uammd_wrapper.o: $(PYTHON_WRAPPER_DIR)/uammd_wrapper.cu $(PYTHON_WRAPPER_DIR)/uammd_interface.h
 	$(NVCC) -w -std=c++14 -DMAXLOGLEVEL=$(VERBOSITY) $(GPU_OPTIMIZATION) $(DOUBLEPRECISION) $(INCLUDE_FLAGS_GPU) $(GPU_DEBUG) -Xcompiler "-fPIC -w" -c $< -o $@
 
 uammd_python.o: $(PYTHON_WRAPPER_DIR)/uammd_python.cpp $(PYTHON_WRAPPER_DIR)/uammd_interface.h
-	$(CXX) -std=c++14 -O3 $(DOUBLEPRECISION) $(CPU_DEBUG) $(CPU_OPTIMIZATION) -fPIC -w $(INCLUDE_FLAGS) -c $< -o $@
+	$(CXX) -std=c++14 -O3 $(DOUBLEPRECISION) -DMAXLOGLEVEL=$(VERBOSITY) $(CPU_DEBUG) $(CPU_OPTIMIZATION) -fPIC -w $(INCLUDE_FLAGS) -c $< -o $@
 
 $(LIBRARY_NAME): uammd_wrapper.o uammd_python.o
-	$(NVCC) $(DOUBLEPRECISION) $(GPU_OPTIMIZATION) $(GPU_DEBUG) -w -shared $^ -o $@ $(LDFLAGS_GPU)
+	$(NVCC) $(DOUBLEPRECISION) $(GPU_OPTIMIZATION) -DMAXLOGLEVEL=$(VERBOSITY) $(GPU_DEBUG) -w -shared $^ -o $@ $(LDFLAGS_GPU)
 
 example: example.cpp uammd_wrapper.o
 	$(NVCC) $(DOUBLEPRECISION) $(GPU_OPTIMIZATION) $(GPU_DEBUG) $^ -o $@ $(LDFLAGS_GPU)
