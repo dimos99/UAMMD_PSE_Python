@@ -3,6 +3,7 @@
   See example.cpp for usage instructions.
   See example.py for usage from python.
  */
+#include <thrust/sequence.h>
 #include <uammd.cuh>
 #include <Integrator/BDHI/BDHI_PSE.cuh>
 #include <Integrator/BDHI/BDHI_FCM.cuh>

@@ -1,9 +1,13 @@
+CUDA_PATH    := /usr/local/cuda-12.9
+CUDA_INC     := $(CUDA_PATH)/targets/x86_64-linux/include
+CUDA_LIB     := $(CUDA_PATH)/targets/x86_64-linux/lib64
 
+GPU_ARCH := -gencode arch=compute_75,code=sm_75
 UAMMD_ROOT=uammd/
 PYBIND_ROOT=pybind11/
 PYTHON=python3
-CXX=g++
-NVCC=nvcc -ccbin=$(CXX)
+CXX = g++-12
+NVCC = nvcc -ccbin=$(CXX) $(GPU_ARCH)
 
 #In case you prefer to import with other name
 MODULE_NAME=uammd
@@ -15,18 +19,24 @@ VERBOSITY=0
 #DOUBLEPRECISION=-DDOUBLE_PRECISION
 #You can replace  intel's MKL by lapacke and cblas by removing -DUSE_MKL (in the include flags above) and linking with that instead
 ifeq ($(MKLROOT),)
-LAPACKINCLUDE=-I/usr/include/lapacke -I/usr/include/cblas
-LAPACK_LIBS=-llapacke -lcblas
+LAPACKINCLUDE=-I/usr/include/ -I/usr/include/x86_64-linux-gnu/
+LAPACK_LIBS=-llapacke -lblas
 else
 LAPACKINCLUDE=-I$(MKLROOT)/include -L$(MKLROOT)/lib/intel64 -DUSE_MKL
 LAPACK_LIBS=-lmkl_rt -lpthread -ldl
 endif
 
-INCLUDE_FLAGS_GPU= -I$(UAMMD_ROOT)/src -I$(UAMMD_ROOT)/src/third_party $(LAPACKINCLUDE)
+INCLUDE_FLAGS_GPU= -I$(CUDA_INC) \
+                   -I$(UAMMD_ROOT)/src \
+                   -I$(UAMMD_ROOT)/src/third_party \
+                   $(LAPACKINCLUDE)
 
 INCLUDE_FLAGS= `$(PYTHON)-config --includes` -I $(PYBIND_ROOT)/include/
 
-LDFLAGS_GPU= -L/usr/lib64 -lcufft -lcublas $(LAPACK_LIBS)
+LDFLAGS_GPU= -L$(CUDA_LIB) -lcudart \
+             -L/usr/lib/x86_64-linux-gnu -lcufft -lcublas \
+             $(LAPACK_LIBS)
+
 
 GPU_OPTIMIZATION= -O3
 CPU_OPTIMIZATION= -O3

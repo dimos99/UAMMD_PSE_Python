@@ -16,8 +16,8 @@ print(np.reshape(positions, (numberParticles, 3))[0:3]);
 forces = np.array((np.random.rand(3*numberParticles)-0.5), np.float32);
 #It is really important that the result array has the same floating precision as the compiled uammd, otherwise
 # python will just silently pass by copy and the results will be lost
-MF=np.zeros(3*numberParticles, np.float32);
-pse.computeHydrodynamicDisplacements(positions, forces, temperature = 0, prefactor = 0, MF)
+MF=np.zeros(3*numberParticles, np.float32)
+pse.computeHydrodynamicDisplacements(positions, forces, MF, temperature=0, prefactor=0)
 # We can also change the shear strain at any point
 pse.setShearStrain(1.0)
 print(MF)
