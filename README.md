@@ -19,11 +19,25 @@ The PSE module uses cufft, cublas, lapacke and cblas which need to be available 
 
 ### Compilation
 
-Just run `make` and thats it. Notice that you may need to modify it with the appropiate paths of your systems (mainly the location of nvcc and python).  
-The Makefile uses the `python-config` utility and assumes that is called `$(PYTHON)-config`, change it otherwise.  
-You may enable debug mode by adding `-DUAMMD_DEBUG -g -G` to the compilation line, also increasing the verbosity in the makefile will help track down any runtime issues.  
-The Makefile also assumes `nvcc` is in the PATH but you can easily change it to point to wherever it is.   
+#### Using Makefile (legacy)
+Just run `make` and that's it. You may need to modify the Makefile for your system (e.g., paths to nvcc, python, etc.).
 
+#### Using CMake (recommended)
+1. Create a build directory and configure the project:
+   ```sh
+   mkdir build && cd build
+   cmake ..
+   make -j4
+   ```
+2. Install the Python module and example executable:
+   ```sh
+   make install
+   ```
+   This will copy the Python module (`uammd`) directly into your current Python environment's site-packages directory, so you can import it from anywhere without modifying `sys.path` or using `PYTHONPATH`. You might need to run the install command with `sudo` (i.e., `sudo make install`).
+
+#### Notes
+- The Makefile builds the Python module in the project root, while CMake builds it in `build/` and installs it to your Python environment.
+- You can still use the Makefile if you prefer, but CMake is more portable and robust.
 
 ### Example
 Do not try to modify the parameters after you have created the UAMMD object as it will have no effect whatsoever in it.  
